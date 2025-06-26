@@ -2,9 +2,10 @@ from django.contrib.auth.models import User
 from rest_framework import serializers, validators
 
 class RegisterSerializer(serializers.ModelSerializer):
+    face_image = serializers.ImageField(write_only=True, required=True)
     class Meta:
         model = User
-        fields = ('username', 'password', 'email', 'first_name', 'last_name')
+        fields = ('username', 'password', 'email', 'first_name', 'last_name', 'face_image')
         
         extra_kwargs = {
             "password": {"write_only": True},
@@ -34,3 +35,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             last_name=last_name
         )
         return user
+    
+class FaceVerificationSerializer(serializers.Serializer):
+    face_image = serializers.ImageField(write_only=True, required=True)
