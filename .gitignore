@@ -1,1 +1,51 @@
+# Arquivos Sensíveis e de Configuração de Ambiente
+# Nunca devem ser enviados para o repositório!
 .env
+*.env
+
+# Ambiente Virtual do Python
+# Contém todas as bibliotecas instaladas e não deve ser versionado.
+venv/
+
+# Banco de Dados
+# É melhor recriar o banco de dados a partir das "migrations"
+# do que versionar o arquivo de dados, especialmente em equipe.
+db.sqlite3
+db.sqlite3-journal
+
+# Arquivos de Mídia (Uploads dos Usuários)
+# As fotos dos rostos e outros uploads ficam aqui.
+media/
+
+# Arquivos Estáticos Coletados
+# Esta pasta é gerada pelo comando `collectstatic` para deploy.
+# Os arquivos estáticos originais já estão nas pastas de cada app.
+staticfiles/
+
+# Cache e Arquivos Compilados do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Metadados de pacotes e build do Python
+*.egg-info/
+build/
+dist/
+*.egg
+
+# Arquivos de Log
+*.log
+
+# Arquivos de IDEs e Editores de Código
+# Impede que suas configurações pessoais de editor sejam enviadas.
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Arquivos de Sistema Operacional
+# Lixo gerado pelo macOS, Windows e Linux.
+.DS_Store
+Thumbs.db
+desktop.ini
