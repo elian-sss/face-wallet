@@ -12,7 +12,15 @@ import json
 import numpy as np
 import cv2
 
+from django.contrib.auth.models import User
 from .serializers import RegisterSerializer, FaceVerificationSerializer
+from django.utils import timezone
+from datetime import timedelta
+from .services import send_whatsapp_code
+from .serializers import (
+    RegisterSerializer, PhoneVerificationSerializer, 
+    PasswordResetRequestSerializer, PasswordResetConfirmSerializer
+)
 
 class RegisterView(CreateAPIView):
     serializer_class = RegisterSerializer
@@ -98,3 +106,129 @@ class FaceVerificationView(APIView):
             return Response({"detail": "Perfil não encontrado."}, status=404)
         except Exception as e:
             return Response({"detail": f"Ocorreu um erro durante a verificação: {e}"}, status=500)
+        
+class RegisterView(CreateAPIView):
+    serializer_class = RegisterSerializer
+    permission_classes = (AllowAny,)
+
+    def perform_create(self, serializer):
+        phone_number = serializer.validated_data.pop('phone_number')
+        face_image = serializer.validated_data.pop('face_image')
+        user = serializer.save()
+
+        embedding = None
+        if face_image:
+            try:
+                image_bytes = face_image.read()
+                nparr = np.frombuffer(image_bytes, np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+                face_encodings = face_recognition.face_encodings(rgb_img)
+                
+                if not face_encodings:
+                    user.delete()
+                    raise serializers.ValidationError({"face_image": "Nenhum rosto detectado na imagem."})
+                embedding = face_encodings[0]
+            
+            except Exception as e:
+                user.delete()
+                raise serializers.ValidationError({"face_image": f"Erro no processamento facial: {e}"})
+        else:
+             user.delete()
+             raise serializers.ValidationError({"face_image": "A imagem facial é obrigatória."})
+
+        profile = Profile.objects.create(
+            user=user, 
+            phone_number=phone_number, 
+            face_embedding=json.dumps(embedding.tolist())
+        )
+        
+        code, success = send_whatsapp_code(phone_number, user)
+        
+        if success:
+            profile.verification_code = code
+            profile.verification_expiry = timezone.now() + timedelta(minutes=10)
+            profile.save()
+        else:
+            user.delete()
+            raise serializers.ValidationError({"detail": "Não foi possível enviar o código de verificação. Tente novamente."})
+
+class PhoneVerificationView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = PhoneVerificationSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data['username']
+        code = serializer.validated_data['code']
+
+        try:
+            user = User.objects.get(username=username)
+            profile = user.profile
+        except (User.DoesNotExist, Profile.DoesNotExist):
+            return Response({"detail": "Usuário não encontrado."}, status=404)
+
+        if profile.is_verification_code_expired() or profile.verification_code != code:
+            return Response({"detail": "Código inválido ou expirado."}, status=400)
+
+        profile.is_phone_verified = True
+        profile.verification_code = None
+        profile.verification_expiry = None
+        profile.save()
+
+        return Response({"detail": "Telefone verificado com sucesso!"}, status=200)
+
+class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = PasswordResetRequestSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        phone_number = serializer.validated_data['phone_number']
+
+        try:
+            profile = Profile.objects.get(phone_number=phone_number, is_phone_verified=True)
+            user = profile.user
+        except Profile.DoesNotExist:
+            return Response({"detail": "Se um usuário com este telefone verificado existir, um código será enviado."}, status=200)
+
+        code, success = send_whatsapp_code(phone_number, user)
+        if success:
+            profile.verification_code = code
+            profile.verification_expiry = timezone.now() + timedelta(minutes=10)
+            profile.save()
+
+        return Response({"detail": "Se um usuário com este telefone verificado existir, um código será enviado."}, status=200)
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = PasswordResetConfirmSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        phone_number = serializer.validated_data['phone_number']
+        code = serializer.validated_data['code']
+        password = serializer.validated_data['password']
+
+        try:
+            profile = Profile.objects.get(phone_number=phone_number)
+            user = profile.user
+        except Profile.DoesNotExist:
+            return Response({"detail": "Código inválido ou expirado."}, status=400)
+
+        if profile.is_verification_code_expired() or profile.verification_code != code:
+            return Response({"detail": "Código inválido ou expirado."}, status=400)
+
+        user.set_password(password)
+        user.save()
+        
+        profile.verification_code = None
+        profile.verification_expiry = None
+        profile.save()
+
+        return Response({"detail": "Senha redefinida com sucesso."}, status=200)

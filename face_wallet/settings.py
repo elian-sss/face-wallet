@@ -136,3 +136,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ]
 }
+
+EVOLUTION_API_URL = config('EVOLUTION_API_URL')
+EVOLUTION_API_KEY = config('EVOLUTION_API_KEY')
+EVOLUTION_INSTANCE_NAME = config('EVOLUTION_INSTANCE_NAME')

@@ -1,11 +1,13 @@
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers, validators
 
 class RegisterSerializer(serializers.ModelSerializer):
     face_image = serializers.ImageField(write_only=True, required=True)
+    phone_number = serializers.CharField(write_only=True, required=True)
     class Meta:
         model = User
-        fields = ('username', 'password', 'email', 'first_name', 'last_name', 'face_image')
+        fields = ('username', 'password', 'email', 'first_name', 'last_name', 'face_image', 'phone_number')
         
         extra_kwargs = {
             "password": {"write_only": True},
@@ -38,3 +40,21 @@ class RegisterSerializer(serializers.ModelSerializer):
     
 class FaceVerificationSerializer(serializers.Serializer):
     face_image = serializers.ImageField(write_only=True, required=True)
+
+class PhoneVerificationSerializer(serializers.Serializer):
+    username = serializers.CharField(required=True)
+    code = serializers.CharField(required=True, max_length=6)
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(required=True)
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(required=True)
+    code = serializers.CharField(required=True, max_length=6)
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({"password": "As senhas não correspondem."})
+        return attrs
