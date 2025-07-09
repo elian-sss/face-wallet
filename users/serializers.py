@@ -49,7 +49,7 @@ class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(required=True)
+    email = serializers.EmailField(required=True) # <-- MUDANÇA AQUI
     code = serializers.CharField(required=True, max_length=6)
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)

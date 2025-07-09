@@ -187,21 +187,18 @@ class PasswordResetRequestView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data['email'] # Agora usamos o email
+        email = serializer.validated_data['email']
 
         try:
-            # Busca pelo usuário com o email (que é único)
             user = User.objects.get(email=email)
             profile = user.profile
             
-            # Garante que o telefone daquele usuário específico está verificado
             if not profile.is_phone_verified:
                  return Response({"detail": "O telefone deste usuário não está verificado."}, status=400)
 
         except (User.DoesNotExist, Profile.DoesNotExist):
             return Response({"detail": "Se uma conta com este e-mail existir, um código será enviado."}, status=200)
 
-        # Pega o telefone do perfil encontrado e envia o código
         phone_number = profile.phone_number
         code, success = send_whatsapp_code(phone_number, user)
 
@@ -220,16 +217,16 @@ class PasswordResetConfirmView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        phone_number = serializer.validated_data['phone_number']
+        email = serializer.validated_data['email']
         code = serializer.validated_data['code']
         password = serializer.validated_data['password']
 
         try:
-            profile = Profile.objects.get(phone_number=phone_number)
-            user = profile.user
-        except Profile.DoesNotExist:
-            return Response({"detail": "Código inválido ou expirado."}, status=400)
-
+            user = User.objects.get(email=email)
+            profile = user.profile
+        except (User.DoesNotExist, Profile.DoesNotExist):
+            return Response({"detail": "Código inválido ou link expirado."}, status=400)
+        
         if profile.is_verification_code_expired() or profile.verification_code != code:
             return Response({"detail": "Código inválido ou expirado."}, status=400)
 
