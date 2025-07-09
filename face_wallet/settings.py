@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'cards',
     'rest_framework',
     'rest_framework.authtoken',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -52,6 +53,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
 ]
 
 ROOT_URLCONF = 'face_wallet.urls'
@@ -140,3 +143,9 @@ REST_FRAMEWORK = {
 EVOLUTION_API_URL = config('EVOLUTION_API_URL')
 EVOLUTION_API_KEY = config('EVOLUTION_API_KEY')
 EVOLUTION_INSTANCE_NAME = config('EVOLUTION_INSTANCE_NAME')
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:5173"
+]

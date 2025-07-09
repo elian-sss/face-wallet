@@ -46,7 +46,7 @@ class PhoneVerificationSerializer(serializers.Serializer):
     code = serializers.CharField(required=True, max_length=6)
 
 class PasswordResetRequestSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(required=True)
+    email = serializers.EmailField(required=True)
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     phone_number = serializers.CharField(required=True)

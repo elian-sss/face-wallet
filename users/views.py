@@ -187,21 +187,30 @@ class PasswordResetRequestView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        phone_number = serializer.validated_data['phone_number']
+        email = serializer.validated_data['email'] # Agora usamos o email
 
         try:
-            profile = Profile.objects.get(phone_number=phone_number, is_phone_verified=True)
-            user = profile.user
-        except Profile.DoesNotExist:
-            return Response({"detail": "Se um usuário com este telefone verificado existir, um código será enviado."}, status=200)
+            # Busca pelo usuário com o email (que é único)
+            user = User.objects.get(email=email)
+            profile = user.profile
+            
+            # Garante que o telefone daquele usuário específico está verificado
+            if not profile.is_phone_verified:
+                 return Response({"detail": "O telefone deste usuário não está verificado."}, status=400)
 
+        except (User.DoesNotExist, Profile.DoesNotExist):
+            return Response({"detail": "Se uma conta com este e-mail existir, um código será enviado."}, status=200)
+
+        # Pega o telefone do perfil encontrado e envia o código
+        phone_number = profile.phone_number
         code, success = send_whatsapp_code(phone_number, user)
+
         if success:
             profile.verification_code = code
             profile.verification_expiry = timezone.now() + timedelta(minutes=10)
             profile.save()
-
-        return Response({"detail": "Se um usuário com este telefone verificado existir, um código será enviado."}, status=200)
+        
+        return Response({"detail": "Se uma conta com este e-mail existir, um código será enviado."}, status=200)
 
 
 class PasswordResetConfirmView(APIView):

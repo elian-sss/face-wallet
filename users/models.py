@@ -5,7 +5,7 @@ from django.utils import timezone
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     face_embedding = models.TextField(null=True, blank=True)
-    phone_number = models.CharField(max_length=20, null=True, blank=True, unique=True)
+    phone_number = models.CharField(max_length=20, null=True, blank=True)
     is_phone_verified = models.BooleanField(default=False)
     verification_code = models.CharField(max_length=6, null=True, blank=True)
     verification_expiry = models.DateTimeField(null=True, blank=True)
